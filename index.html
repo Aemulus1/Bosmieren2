@@ -1,5 +1,5 @@
-<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bosschilders 3.29b — hoekschaduwen</title><style>body{background:#0c1116;color:#f2efe7;font:15px system-ui;margin:0;padding:16px}main{max-width:720px;margin:auto}canvas{width:100%;aspect-ratio:1;display:block;border:1px solid #5b665e}button{padding:10px 13px;border:1px solid #53616d;background:#202a33;color:white;border-radius:8px;margin:8px 5px 8px 0}input{width:100%;accent-color:#d6a95f}.line{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#c6cfbf}h2{margin:0 0 6px}</style><main><h2>Bosschilders 3.29b — hoekschaduwen</h2><p>Omnia interpretatie · een donker bos geschilderd door vier mieren</p><div style="position:relative;aspect-ratio:1"><canvas id="art" width="1000" height="1000" style="position:absolute;inset:0"></canvas><canvas id="dots" width="1000" height="1000" style="position:absolute;inset:0;pointer-events:none;border:0"></canvas></div><div class="line"><span id="status">Lucht</span><span id="count">0 stappen</span></div><button id="start">Start</button><button id="new">Nieuw schilderij</button><button id="pause">Pauze</button><button id="save">Bewaar PNG</button><label style="display:block;margin:10px 0 5px">Kleurfamilie <select id="mode" style="background:#202a33;color:white;border:1px solid #53616d;border-radius:8px;padding:9px;width:100%;margin-top:5px"><option value="2">2 kleuren · duotoon</option><option value="3">3 kleuren · triade</option><option value="4" selected>4 kleuren · nocturne</option></select></label><div class="line"><span>Boomdikte · 0 = oorspronkelijk, 5 = dicht bos</span><b id="thicklabel">4 / 5</b></div><input id="thick" type="range" min="0" max="5" step="1" value="4"><div class="line"><span>Kleurcontrast · spanning</span><b id="contrastlabel">2 / 5</b></div><input id="contrast" type="range" min="0" max="5" step="1" value="2"><div class="line"><span>Bodemverzadiging · alleen stap 2</span><b id="groundsaturationlabel">100%</b></div><input id="groundsaturation" type="range" min="0" max="200" step="5" value="100"><div class="line"><span>Bodemhelderheid · alleen stap 2</span><b id="groundbrightnesslabel">80%</b></div><input id="groundbrightness" type="range" min="20" max="140" step="5" value="80"><div class="line"><span>Donkerte · stammen + schaduwen</span><b id="blacklabel">5 / 5</b></div><input id="black" type="range" min="0" max="5" step="1" value="5"><div class="line"><span>Stappen per seconde</span><b id="speedlabel">10.000</b></div><input id="speed" type="range" min="3000" max="50000" step="1000" value="10000"><p>Lichtopening · nachtkleuren · diepe bosvloer · grillige slagschaduwen · CMYK-mieren</p></main><script>
-(()=>{const c=document.getElementById('art'),g=c.getContext('2d',{alpha:false}),dg=document.getElementById('dots').getContext('2d'),$=id=>document.getElementById(id),R=(a,b)=>a+Math.random()*(b-a),mix=(a,b,t)=>a.map((v,i)=>v*(1-t)+b[i]*t),rgba=(a,t)=>`rgba(${a.map(Math.round).join(',')},${t})`;const cool=[[23,78,106],[16,111,124],[24,88,93],[33,63,94],[38,102,95]];const warm=[[236,182,74],[220,112,62],[194,66,84],[226,145,52],[170,48,76]];const grounds=[[36,31,28],[31,29,26],[42,34,27],[28,33,31],[39,29,34]];const blue=[27,82,120],yellow=[238,184,73],magenta=[188,62,132],teal=[22,108,103],orange=[210,104,50],red=[162,42,60],violet=[103,73,142];const mode2Pairs=[[blue,yellow],[teal,magenta],[violet,orange]];const mode3Schemes=[{base:[blue,yellow],side:'warm',edge:red},{base:[teal,magenta],side:'warm',edge:orange},{base:[violet,yellow],side:'cool',edge:teal},{base:[blue,magenta],side:'warm',edge:yellow},{base:[teal,yellow],side:'warm',edge:red}];let pal,activeColors,edge,horizon,ants,phase,done,steps,phaseSteps,paused=true,speed=10000,last=0,budget=0,mode=4,extraWarm=true,extraCool=true,warmEdge,coolEdge;const targets=[200000,160000,100000];let trees=[],marks=[],remainingMarks=[],treeIndex=0,treeTravel=0,thickness=2,blueLeft=Math.random()<.5,lightHigh=Math.random()<.5,paintingNumber=0,shadowDirection=1,lightFocusX=500,lightFocusY=260;const treeMask=document.createElement('canvas');treeMask.width=1000;treeMask.height=1000;const mg=treeMask.getContext('2d');let maskData=null;function buildHorizon(){
+<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bosschilders — Omnia nachtvariant</title><style>body{background:#17211d;color:#f3f1e8;font:15px system-ui;margin:0;padding:16px}main{max-width:680px;margin:auto}canvas{width:100%;aspect-ratio:1;display:block;border:1px solid #5b665e}button{padding:10px 13px;border:1px solid #7c8a7b;background:#304b3b;color:white;border-radius:8px;margin:8px 5px 8px 0}input{width:100%;accent-color:#b6c69a}.line{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#c6cfbf}h2{margin:0 0 6px}</style><main><h2>Bosschilders — Omnia nachtvariant</h2><p>Teekay &amp; Omnia 26 · Lucht, bodem, bomen en schaduwen</p><div style="position:relative;aspect-ratio:1"><canvas id="art" width="1000" height="1000" style="position:absolute;inset:0"></canvas><canvas id="dots" width="1000" height="1000" style="position:absolute;inset:0;pointer-events:none;border:0"></canvas></div><div class="line"><span id="status">Lucht</span><span id="count">0 stappen</span></div><button id="start">Start</button><button id="new">Nieuw schilderij</button><button id="pause">Pauze</button><button id="save">Bewaar PNG</button><label style="display:block;margin:10px 0 5px">Achtergrondkleuren <select id="mode" style="background:#304b3b;color:white;border:1px solid #7c8a7b;border-radius:8px;padding:9px;width:100%;margin-top:5px"><option value="2">2 kleuren · klassieke menging</option><option value="3">3 kleuren · extra warm óf koel</option><option value="4" selected>4 kleuren · warm én koel geschakeerd</option></select></label><div class="line"><span>Boomdikte · 0 = oorspronkelijk, 5 = dicht bos</span><b id="thicklabel">2 / 5</b></div><input id="thick" type="range" min="0" max="5" step="1" value="2"><div class="line"><span>Kleurcontrast · 2 = oorspronkelijke kleuren</span><b id="contrastlabel">2 / 5</b></div><input id="contrast" type="range" min="0" max="5" step="1" value="2"><div class="line"><span>Bodemverzadiging · alleen stap 2</span><b id="groundsaturationlabel">100%</b></div><input id="groundsaturation" type="range" min="0" max="200" step="5" value="100"><div class="line"><span>Bodemhelderheid · alleen stap 2</span><b id="groundbrightnesslabel">100%</b></div><input id="groundbrightness" type="range" min="20" max="140" step="5" value="100"><div class="line"><span>Zwartintensiteit · stammen + schaduwen</span><b id="blacklabel">5 / 5</b></div><input id="black" type="range" min="0" max="5" step="1" value="5"><div class="line"><span>Stappen per seconde</span><b id="speedlabel">10.000</b></div><input id="speed" type="range" min="3000" max="50000" step="1000" value="10000"><p>50% kans blauw links of rechts · golvende horizon · perspectivische bomen · grillige takken · schuine schaduwen · CMYK-mieren</p></main><script>
+(()=>{const c=document.getElementById('art'),g=c.getContext('2d',{alpha:false}),dg=document.getElementById('dots').getContext('2d'),$=id=>document.getElementById(id),R=(a,b)=>a+Math.random()*(b-a),mix=(a,b,t)=>a.map((v,i)=>v*(1-t)+b[i]*t),rgba=(a,t)=>`rgba(${a.map(Math.round).join(',')},${t})`;const cool=[[47,178,249],[29,201,224],[22,181,181],[20,156,146],[39,193,166]];const warm=[[255,236,39],[255,197,36],[255,139,33],[245,83,38],[196,34,31]];const grounds=[[65,49,34],[60,45,32],[55,42,30],[70,52,36],[50,39,28]];const blue=[38,170,240],yellow=[255,224,46],magenta=[232,78,174],teal=[12,151,126],orange=[225,110,35],red=[196,34,31],violet=[142,88,198];const mode2Pairs=[[blue,yellow],[blue,magenta],[yellow,magenta]];const mode3Schemes=[{base:[blue,yellow],side:'warm',edge:orange},{base:[blue,yellow],side:'warm',edge:red},{base:[blue,magenta],side:'warm',edge:yellow},{base:[yellow,magenta],side:'cool',edge:blue},{base:[blue,magenta],side:'cool',edge:teal},{base:[yellow,magenta],side:'warm',edge:red},{base:[blue,yellow],side:'cool',edge:teal},{base:[blue,magenta],side:'warm',edge:violet}];let pal,edge,horizon,ants,phase,done,steps,phaseSteps,paused=true,speed=10000,last=0,budget=0,mode=4,extraWarm=true,extraCool=true,warmEdge,coolEdge;const targets=[200000,160000,100000];let trees=[],marks=[],remainingMarks=[],treeIndex=0,treeTravel=0,thickness=2,blueLeft=Math.random()<.5,lightHigh=Math.random()<.5,paintingNumber=0,shadowDirection=1;const treeMask=document.createElement('canvas');treeMask.width=1000;treeMask.height=1000;const mg=treeMask.getContext('2d');let maskData=null;function buildHorizon(){
  const points=[];let broad=0,mid=0,rough=0;
  for(let x=0;x<=1000;x+=5){
   broad=.985*broad+R(-3,3);mid=.84*mid+R(-5,5);rough=.4*rough+R(-6,6);
@@ -12,7 +12,7 @@
  }
 }
 function boundary(x){return horizon[Math.max(0,Math.min(1000,Math.round(x)))];}
-function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random()<.5;shadowDirection=Math.random()<.5?-1:1;mode=Number($('mode').value);warmEdge=red;coolEdge=teal;pal=[blue,yellow,grounds[Math.floor(R(0,5))]];activeColors=[blue,yellow];lightFocusX=R(220,780);lightFocusY=R(120,360);extraWarm=false;extraCool=false;if(mode===2){const pair=mode2Pairs[Math.floor(R(0,mode2Pairs.length))];pal=[pair[0],pair[1],grounds[Math.floor(R(0,5))]];activeColors=[pair[0],pair[1]];}else if(mode===3){const scheme=mode3Schemes[Math.floor(R(0,mode3Schemes.length))];pal=[scheme.base[0],scheme.base[1],grounds[Math.floor(R(0,5))]];activeColors=[scheme.base[0],scheme.base[1],scheme.edge];if(scheme.side==='warm'){extraWarm=true;warmEdge=scheme.edge;}else{extraCool=true;coolEdge=scheme.edge;}}else{extraWarm=true;extraCool=true;warmEdge=red;coolEdge=teal;pal=[blue,yellow,grounds[Math.floor(R(0,5))]];activeColors=[blue,yellow,red,teal];}edge=Math.round(555+225*Math.pow(Math.random(),2.2));buildHorizon();ants=Array.from({length:4},(_,i)=>({x:R(0,1000),y:R(0,edge),vx:R(-1,1),vy:R(-1,1),i}));g.fillStyle=rgba([18,25,31],1);g.fillRect(0,0,1000,1000);
+function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random()<.5;shadowDirection=Math.random()<.5?-1:1;mode=Number($('mode').value);warmEdge=red;coolEdge=teal;pal=[blue,yellow,grounds[Math.floor(R(0,5))]];extraWarm=false;extraCool=false;if(mode===2){const pair=mode2Pairs[Math.floor(R(0,mode2Pairs.length))];pal=[pair[0],pair[1],grounds[Math.floor(R(0,5))]];}else if(mode===3){const scheme=mode3Schemes[Math.floor(R(0,mode3Schemes.length))];pal=[scheme.base[0],scheme.base[1],grounds[Math.floor(R(0,5))]];if(scheme.side==='warm'){extraWarm=true;warmEdge=scheme.edge;}else{extraCool=true;coolEdge=scheme.edge;}}else{extraWarm=true;extraCool=true;warmEdge=red;coolEdge=teal;pal=[blue,yellow,grounds[Math.floor(R(0,5))]];}edge=Math.round(500+300*Math.pow(Math.random(),2.73));buildHorizon();ants=Array.from({length:4},(_,i)=>({x:R(0,1000),y:R(0,edge),vx:R(-1,1),vy:R(-1,1),i}));g.fillStyle=rgba(mix(pal[0],[249,246,230],.22),1);g.fillRect(0,0,1000,1000);
  g.fillStyle=rgba(mix(pal[2],[40,31,24],.12),1);
  g.beginPath();g.moveTo(0,1000);g.lineTo(0,boundary(0));
  for(let x=1;x<=1000;x++)g.lineTo(x,boundary(x));
@@ -20,7 +20,7 @@ function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random(
  phase=0;done=false;steps=0;phaseSteps=0;treeTravel=0;paused=true;budget=0;maskData=null;mg.clearRect(0,0,1000,1000);prepareTrees();ants.forEach(a=>{a.target=null;a.travel=0});$('start').textContent='Start';$('pause').textContent='Pauze'}function prepareTrees(){
  trees=[];marks=[];treeIndex=0;thickness=Number($('thick').value);
  // BASIS 3.25: de oorspronkelijke 58 bomen blijven exact volgens dezelfde verdeling.
- const treeCount=64;
+ const treeCount=58;
  const xPositions=[];
  for(let i=0;i<treeCount;i++){
   const slot=(i+R(.08,.92))/treeCount;
@@ -39,7 +39,7 @@ function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random(
   trees.push({x,base,thick,height,depth,seed:R(0,9999),rear:rearTree});
  }
  // EXTRA horizonlaag: alleen kleine achterste bomen toevoegen, zonder de 58 basisbomen te vervangen.
- const extraRear=48;
+ const extraRear=34;
  for(let i=0;i<extraRear;i++){
   const slot=(i+R(.12,.88))/extraRear;
   const x=-70+slot*1140+R(-5,5);
@@ -51,24 +51,6 @@ function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random(
   height=Math.max(height,base*R(.58,.90));
   if(Math.random()<.18){thick*=.55;height*=1.10;}
   trees.push({x,base,thick,height,depth,seed:R(0,9999),rear:true});
- }
- // NIEUW 3.30: extra voorrij dikke stammen dicht bij de kijker, met voet buiten beeld.
- // Doel: geen lege onderhoeken meer; 2 t/m 5 zware stammen vooraan zonder de bestaande bosopbouw te wijzigen.
- const nearCount=4+Math.floor(R(0,3));
- const cornerLeft=Math.random()<.5;
- const nearXs=[];
- nearXs.push(cornerLeft?R(-40,95):R(905,1040));
- for(let i=1;i<nearCount;i++){
-  nearXs.push(R(20,980));
- }
- for(const x of nearXs){
-  const depth=.985+Math.random()*.015;
-  const base=1038+R(0,120); // stamvoet valt onder de onderrand, dus niet zichtbaar
-  const thickScale=[.92,1.00,1.10,1.22,1.38,1.56][thickness];
-  let thick=(26+R(0,34))*thickScale;
-  let height=(700+R(0,430))*Math.max(.90,thickScale*.84);
-  if(Math.random()<.22){thick*=R(.82,.92);height*=R(1.02,1.10);}
-  trees.push({x,base,thick,height,depth,seed:R(0,9999),rear:false,front:true});
  }
  trees.sort((a,b)=>a.base-b.base);
  function branch(x,y,angle,length,width,col,level){
@@ -93,13 +75,13 @@ function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random(
  for(const tr of trees){
   const col=[8,9,8];
   const n=Math.max(16,Math.ceil(tr.height/9));
-  let x=tr.x,y=tr.base,heading=tr.front?R(-.08,.08):R(-.18,.18);
+  let x=tr.x,y=tr.base,heading=R(-.12,.12);
   for(let j=0;j<n;j++){
    const t=j/n,step=tr.height/n;
    heading+=R(-.045,.045)+Math.sin(t*10+tr.seed)*.011;
-   heading=Math.max(-.42,Math.min(.42,heading));
+   heading=Math.max(-.50,Math.min(.50,heading));
    const nx=x+Math.sin(heading)*step,ny=y-step;
-   const taper=tr.front?.66:(thickness===0?.72:Math.max(.42,(tr.depth>.55?.56:.64)-thickness*.018));const widthJitter=tr.front?R(.96,1.04):R(.91,1.08);const w=tr.thick*Math.pow(1-t,taper)*widthJitter+.5;
+   const taper=thickness===0?.72:Math.max(.42,(tr.depth>.55?.56:.64)-thickness*.018);const w=tr.thick*Math.pow(1-t,taper)*R(.91,1.08)+.5;
    marks.push({kind:1,x,y,bx:nx,by:ny,w,col});
    x=nx;y=ny;
    if(t>.16&&t<.94&&Math.random()<(.11+tr.depth*.025)){
@@ -115,17 +97,8 @@ function reset(){if(paintingNumber++>0)blueLeft=!blueLeft;lightHigh=Math.random(
   const shadowLen=Math.min(shadowDirection>0?(1000-tr.x):tr.x,(1000-tr.base)/.36)+120;
   // Eén aaneengesloten, harde zwarte slagschaduw per stam.
   // De breedte aan de voet is exact de stamdiameter; geen zachte stippen.
-  const shadowW=Math.max(tr.rear?3.8:(tr.front?8.2:5.2),tr.thick*(tr.rear?1.15:(tr.front?1.22:1.28)));
+  const shadowW=Math.max(tr.rear?3.8:5.2,tr.thick*(tr.rear?1.15:1.28));
   marks.push({kind:3,x:tr.x,y:tr.base,bx:tr.x+shadowDirection*shadowLen,by:tr.base+shadowLen*.36,w:shadowW,col:[0,0,0],rear:tr.rear});
- }
- // Beide onderste hoeken krijgen altijd een grillige slagschaduw,
- // zodat er nergens een open, lichte hoek overblijft.
- const cornerShadows=[
-  {x:18,y:R(835,930),bx:R(165,285),by:R(915,995),w:R(14,24)},
-  {x:982,y:R(835,930),bx:R(715,835),by:R(915,995),w:R(14,24)}
- ];
- for(const cs of cornerShadows){
-  marks.push({kind:3,x:cs.x,y:cs.y,bx:cs.bx,by:cs.by,w:cs.w,col:[0,0,0],rear:false});
  }
  // Laag 3 gebruikt nu opnieuw de vrije masker-miermotor uit versie 4.
  remainingMarks=marks.slice();
@@ -281,18 +254,25 @@ function relocate(a){a.x=R(0,1000);a.y=phase===0?R(0,boundary(a.x)):R(boundary(a
  if(a.x<0||a.x>999||a.y<0||a.y>999){a.x=Math.max(0,Math.min(999,a.x));a.y=Math.max(0,Math.min(999,a.y));a.vx*=-1;a.vy*=-1;}
  paintBlackTrace(a,px,py);
  return;
- }if(Math.random()<.018||a.x<0||a.x>999||a.y<0||a.y>999)relocate(a);a.vx=Math.max(-2,Math.min(2,a.vx+R(-.55,.55)));a.vy=Math.max(-2,Math.min(2,a.vy+R(-.55,.55)));let d=Math.hypot(a.vx,a.vy)||1;a.x+=a.vx/d*R(2,15);a.y+=a.vy/d*R(2,15);if((phase===0&&a.y>boundary(a.x))||(phase===1&&a.y<boundary(a.x))){relocate(a);return}let col;if(phase===0){const dx=(a.x-lightFocusX)/560,dy=(a.y-lightFocusY)/620;let glow=Math.max(0,1-Math.hypot(dx,dy));glow=Math.pow(glow,1.65);glow=Math.max(0,Math.min(1,glow+.10*Math.sin(a.y*.010+a.x*.003)+.05*Math.cos(a.x*.018-a.y*.007)+R(-.08,.08)));let cold=pal[0],hot=pal[1];if(extraCool)cold=mix(cold,coolEdge,Math.max(0,Math.min(.75,.22+.20*Math.sin(a.y*.012))));if(extraWarm)hot=mix(hot,warmEdge,Math.max(0,Math.min(.78,.18+.42*glow)));col=mix(cold,hot,Math.max(.05,Math.min(.92,glow)));const mist=Math.max(0,1-Math.abs(a.y-boundary(a.x))/95);if(mist>0)col=mix(col,[171,177,160],mist*R(.03,.13));if(a.i===0)col=mix(col,pal[0],R(.10,.28));if(a.i===2)col=mix(col,pal[1],R(.04,.22));if(a.i===3)col=mix(col,[214,209,186],R(.02,.10))}else{
-  // Stap 2: in de 2- en 3-kleurenstand gebruikt de bodem alle gekozen kleuren,
-  // zodat niet alleen kleur 2 de bosgrond bepaalt. De 4-kleurenstand blijft ongewijzigd.
-  const ochre=[126,88,43],rust=[96,47,43],deep=[33,36,34],darkBrown=[28,24,23],olive=[49,58,43];
-  const c1=activeColors[Math.floor(R(0,activeColors.length))],c2=activeColors[Math.floor(R(0,activeColors.length))],chooser=Math.random();
-  if(chooser<.46) col=mix(pal[2],deep,R(.22,.52));
-  else if(chooser<.66) col=mix(c1,darkBrown,R(.38,.66));
-  else if(chooser<.82) col=mix(c2,rust,R(.30,.56));
-  else if(chooser<.93) col=mix(olive,ochre,R(.18,.42));
-  else col=mix(c1,c2,R(.24,.62));
-  col=mix(col,pal[2],R(.28,.48));
- }if(phase===1){col=applyGroundSaturation(col);col=applyGroundBrightness(col);}g.fillStyle=rgba(applyContrast(col),R(.58,.88));let size=R(4,13);let w=size*R(1.0,2.3),h=size*R(.28,.72);
+ }if(Math.random()<.018||a.x<0||a.x>999||a.y<0||a.y>999)relocate(a);a.vx=Math.max(-2,Math.min(2,a.vx+R(-.55,.55)));a.vy=Math.max(-2,Math.min(2,a.vy+R(-.55,.55)));let d=Math.hypot(a.vx,a.vy)||1;a.x+=a.vx/d*R(2,15);a.y+=a.vy/d*R(2,15);if((phase===0&&a.y>boundary(a.x))||(phase===1&&a.y<boundary(a.x))){relocate(a);return}let col;if(phase===0){const orientedX=blueLeft?1000-a.x:a.x;const orientedY=lightHigh?a.y:1000-a.y;const cornerX=Math.max(0,1-orientedX/1100);const cornerY=Math.max(0,1-orientedY/1100);let glow=Math.pow(cornerX,1.45)*(.45+.55*Math.pow(cornerY,.9));glow=Math.max(0,Math.min(1,glow+.10*Math.sin(a.y*.009)+.06*Math.cos(a.x*.006-a.y*.004)));const blend=Math.max(0,Math.min(1,glow*1.72+R(-.19,.19)));
+ // Preserve the original two-color mixing, but enrich each side independently.
+ let cold=pal[0],hot=pal[1];
+ if(extraCool){const side=Math.pow(Math.max(0,orientedX/1000),1.3);const ripple=.12*Math.sin(a.y*.012+a.x*.004)+.08*Math.sin(a.x*.023-a.y*.014);cold=mix(cold,coolEdge,Math.max(0,Math.min(.85,side*.94+ripple*.9)));}
+ if(extraWarm){const sideX=Math.pow(Math.max(0,1-orientedX/1000),1.2);const sideY=Math.pow(Math.max(0,1-orientedY/1000),1.08);const corner=sideX*(.28+.72*sideY);const ripple=.10*Math.sin(a.y*.009-a.x*.006)+.06*Math.cos(a.x*.017+a.y*.011);hot=mix(hot,warmEdge,Math.max(0,Math.min(.9,corner*.98+ripple*.55)));}
+ col=mix(cold,hot,blend);if(a.i===0)col=mix(col,pal[0],R(.06,.25));if(a.i===2)col=mix(col,pal[1],R(.05,.3));if(a.i===3)col=mix(col,[250,248,224],R(.04,.16))}else{
+  // Stap 2: de bodem zelf wordt de kleurige, geschilderde structuur.
+  // De warme kleuren komen uit dezelfde lichtfamilie als in de lucht.
+  const warmA=pal[1],warmB=extraWarm?warmEdge:mix(pal[1],[205,103,42],.45);
+  const ochre=[148,104,45],rust=[132,62,34],deep=[77,54,36],darkBrown=[52,42,30],olive=[72,68,43];
+  // Geen grote bruine velden meer: de basis blijft warm en geschakeerd.
+  const chooser=Math.random();
+  if(chooser<.34) col=mix(warmA,ochre,R(.24,.58));
+  else if(chooser<.63) col=mix(warmA,warmB,R(.18,.62));
+  else if(chooser<.84) col=mix(warmB,rust,R(.18,.50));
+  else col=mix(ochre,deep,R(.18,.42));
+  // vuil bruin blijft subtiel door de verf heen mengen zodat de kleurige laag bosgrond blijft
+  col=mix(col,pal[2],R(.10,.28));
+ }if(phase===1){col=applyGroundSaturation(col);col=applyGroundBrightness(col);}g.fillStyle=rgba(applyContrast(col),R(.48,.80));let size=R(5,16);let w=size*R(.9,2.0),h=size*R(.35,.9);
  // Split the brushmark into thin columns so the jagged horizon remains crisp.
  for(let xx=Math.max(0,Math.floor(a.x));xx<Math.min(1000,a.x+w);xx+=2){
   const b=boundary(xx),top=phase===0?Math.max(0,a.y):Math.max(b,a.y);
@@ -300,7 +280,7 @@ function relocate(a){a.x=R(0,1000);a.y=phase===0?R(0,boundary(a.x)):R(boundary(a
   if(bottom>top){
    const ww=Math.min(2,a.x+w-xx);
    g.fillRect(xx,top,ww,bottom-top);
-   if(phase===1&&Math.random()<.42){
+   if(phase===1&&Math.random()<.34){
     // Kleine bodemschaduwen van losse bladeren, grassprietjes en takjes.
     // Bewust klein en verspreid: geen grote vlekken of lange bruine stroken.
     const fragments=1+Math.floor(R(0,3));
@@ -323,5 +303,44 @@ function relocate(a){a.x=R(0,1000);a.y=phase===0?R(0,boundary(a.x)):R(boundary(a
     }
    }
   }
- }}function frame(t){let dt=Math.min(70,t-last||16);last=t;if(!paused&&!done){budget+=speed*dt/1000;let n=Math.min(Math.floor(budget),1300);budget-=n;for(let j=0;j<n;j++){paint(ants[j%4]);steps++;phaseSteps++;if((phase<2&&phaseSteps>=targets[phase])||(phase===2&&phaseSteps>=320000)){phase++;phaseSteps=0;if(phase>=3){done=true;break}ants.forEach(relocate)}}}dg.clearRect(0,0,1000,1000);if(!done)ants.forEach(a=>{dg.fillStyle=['#00d6f2','#f046a4','#ffe000','#121313'][a.i];dg.fillRect(a.x-3,a.y-3,7,7)});$('status').textContent=done?'Schilderij voltooid':paused&&$('start').textContent==='Start'?'Wacht op Start':phase===0?'Lucht · '+Math.round(edge/10)+'%':phase===1?'Kleurige bosbodem · '+Math.round((1000-edge)/10)+'%':'Vrije mieren schilderen bomen + grillige schaduwen';$('count').textContent=steps.toLocaleString('nl-BE')+' stappen';requestAnimationFrame(frame)}$('contrast').oninput=e=>{$('contrastlabel').textContent=e.target.value+' / 5';reset()};$('groundsaturation').oninput=e=>{$('groundsaturationlabel').textContent=e.target.value+'%';reset()};$('groundbrightness').oninput=e=>{$('groundbrightnesslabel').textContent=e.target.value+'%';reset()};$('black').oninput=e=>{$('blacklabel').textContent=e.target.value+' / 5';reset()};$('thick').oninput=e=>{thickness=+e.target.value;$('thicklabel').textContent=thickness+' / 5';reset()};$('mode').onchange=reset;$('new').onclick=reset;$('start').onclick=()=>{if(done)return;paused=false;$('start').textContent='Gestart';$('pause').textContent='Pauze'};$('pause').onclick=()=>{if($('start').textContent==='Start'||done)return;paused=!paused;$('pause').textContent=paused?'Verder':'Pauze'};$('speed').oninput=e=>{speed=+e.target.value;$('speedlabel').textContent=speed.toLocaleString('nl-BE')};$('save').onclick=()=>{let a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='omnia-nocturne-ant-forest.png';a.click()};reset();requestAnimationFrame(frame)})();
+ }}
+function drawHorizonVillage(){
+ // Zeer verre, donkere bebouwing: laag en ondergeschikt aan het bos.
+ g.save();
+ const haze=[18,22,28];
+ const dark=[8,11,14];
+ const warmLights=[[255,188,82],[255,214,126],[244,153,62]];
+ let x=-20;
+ while(x<1020){
+  const b=boundary(Math.max(0,Math.min(999,x)));
+  const w=R(10,34);
+  const h=R(5,18)*(Math.random()<.14?R(1.4,2.3):1);
+  const y=b-h+R(-3,4);
+  g.fillStyle=rgba(mix(dark,haze,R(.08,.34)),R(.46,.72));
+  g.fillRect(x,y,w,h+5);
+  if(Math.random()<.12){
+   const roofH=R(3,8);
+   g.beginPath();g.moveTo(x-2,y+1);g.lineTo(x+w*.5,y-roofH);g.lineTo(x+w+2,y+1);g.closePath();g.fill();
+  }
+  if(Math.random()<.18){
+   const tw=R(3,6);g.fillRect(x+w*.45-tw*.5,y-R(5,14),tw,R(6,15));
+  }
+  if(Math.random()<.42){
+   const count=Math.random()<.22?2:1;
+   for(let i=0;i<count;i++){
+    const lx=x+R(3,Math.max(4,w-4)),ly=y+R(2,Math.max(3,h-2));
+    const lc=warmLights[Math.floor(R(0,warmLights.length))];
+    const grad=g.createRadialGradient(lx,ly,0,lx,ly,R(3,7));
+    grad.addColorStop(0,rgba(lc,R(.55,.8)));
+    grad.addColorStop(.28,rgba(lc,R(.18,.35)));
+    grad.addColorStop(1,'rgba(255,170,70,0)');
+    g.fillStyle=grad;g.beginPath();g.arc(lx,ly,R(3,7),0,Math.PI*2);g.fill();
+    g.fillStyle=rgba(lc,R(.55,.9));g.fillRect(lx-.7,ly-.6,R(1,2),R(1,2));
+   }
+  }
+  x+=w+R(2,10);
+ }
+ g.restore();
+}
+function frame(t){let dt=Math.min(70,t-last||16);last=t;if(!paused&&!done){budget+=speed*dt/1000;let n=Math.min(Math.floor(budget),1300);budget-=n;for(let j=0;j<n;j++){paint(ants[j%4]);steps++;phaseSteps++;if((phase<2&&phaseSteps>=targets[phase])||(phase===2&&phaseSteps>=320000)){const finishedPhase=phase;phase++;phaseSteps=0;if(finishedPhase===1)drawHorizonVillage();if(phase>=3){done=true;break}ants.forEach(relocate)}}}dg.clearRect(0,0,1000,1000);if(!done)ants.forEach(a=>{dg.fillStyle=['#00d6f2','#f046a4','#ffe000','#121313'][a.i];dg.fillRect(a.x-3,a.y-3,7,7)});$('status').textContent=done?'Schilderij voltooid':paused&&$('start').textContent==='Start'?'Wacht op Start':phase===0?'Lucht · '+Math.round(edge/10)+'%':phase===1?'Kleurige bosbodem · '+Math.round((1000-edge)/10)+'%':'Vrije mieren schilderen bomen + grillige schaduwen';$('count').textContent=steps.toLocaleString('nl-BE')+' stappen';requestAnimationFrame(frame)}$('contrast').oninput=e=>{$('contrastlabel').textContent=e.target.value+' / 5';reset()};$('groundsaturation').oninput=e=>{$('groundsaturationlabel').textContent=e.target.value+'%';reset()};$('groundbrightness').oninput=e=>{$('groundbrightnesslabel').textContent=e.target.value+'%';reset()};$('black').oninput=e=>{$('blacklabel').textContent=e.target.value+' / 5';reset()};$('thick').oninput=e=>{thickness=+e.target.value;$('thicklabel').textContent=thickness+' / 5';reset()};$('mode').onchange=reset;$('new').onclick=reset;$('start').onclick=()=>{if(done)return;paused=false;$('start').textContent='Gestart';$('pause').textContent='Pauze'};$('pause').onclick=()=>{if($('start').textContent==='Start'||done)return;paused=!paused;$('pause').textContent=paused?'Verder':'Pauze'};$('speed').oninput=e=>{speed=+e.target.value;$('speedlabel').textContent=speed.toLocaleString('nl-BE')};$('save').onclick=()=>{let a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='bosschilders-omnia-nacht.png';a.click()};reset();requestAnimationFrame(frame)})();
 </script></html>
