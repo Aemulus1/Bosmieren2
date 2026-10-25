@@ -58,6 +58,8 @@ aside{order:-1;width:100%;padding:12px}
 <label for="treeAtmosphere">Blauwe atmosferische vervaging: <b id="treeAtmosphereLabel">65%</b></label><input id="treeAtmosphere" type="range" min="0" max="100" step="5" value="65">
 <label>Kleuren van de boomtoppen (zelf te kiezen):</label><div style="display:flex;gap:14px;align-items:center;margin:8px 0 12px"><label style="margin:0">Kleur 1 <input id="treeGreen" type="color" value="#3f8946" style="display:block;width:74px;height:42px;cursor:pointer;padding:2px"></label><label style="margin:0">Kleur 2 <input id="treeBlue" type="color" value="#347eb0" style="display:block;width:74px;height:42px;cursor:pointer;padding:2px"></label></div>
 <label for="treeFoliage">Hoeveelheid ruwe groene streken: <b id="treeFoliageLabel">6</b></label><input id="treeFoliage" type="range" min="0" max="10" value="6">
+<div class="stat">Boomsoorten uit module 5, op afstand geschilderd: berk, eik, beuk en grove den. De boomsoorten worden willekeurig gemengd.</div>
+<button id="testTreeModule" type="button" style="background:#31966f;margin-top:10px;width:100%">▶ Test alleen module 4</button>
 <div class="stat" id="treeStatus">Na de horizon schilderen de mieren verre stammen met ruwe messtreken en blauwige afstandswerking.</div></section>
 <section class="module"><h2>🌳 Module 5 · middelste bomenrij — schors</h2>
 <label for="midRows">Aantal rijen: <b id="midRowsLabel">2</b></label><input id="midRows" type="range" min="1" max="3" step="1" value="2">
@@ -121,7 +123,7 @@ aside{order:-1;width:100%;padding:12px}
 <canvas id="shrubPainting" width="1000" height="1000"></canvas>
 <canvas id="frontPainting" width="1000" height="1000"></canvas>
 <canvas id="groundFinishPainting" width="1000" height="1000"></canvas>
-<canvas id="nearPainting" width="1000" height="1000"></canvas>
+<canvas id="nearPainting" width="1000" height="1000"></canvas><canvas id="nearPhotoAnts" width="1000" height="1000" style="pointer-events:none"></canvas>
 <canvas id="ants" width="1000" height="1000"></canvas>
 <canvas id="signaturePainting" width="1000" height="1000" style="pointer-events:none"></canvas><canvas id="signatureAnts" width="1000" height="1000" style="pointer-events:none"></canvas></div>
 </div></main><script>
@@ -1323,16 +1325,16 @@ const keys=['treeRows','treeCount','treeHeight','treeAtmosphere','treeFoliage'];
 const ctl=Object.fromEntries(keys.map(k=>[k,document.getElementById(k)]));
 keys.forEach(k=>ctl[k].addEventListener('input',()=>document.getElementById(k+'Label').textContent=ctl[k].value+(k==='treeHeight'?' px':k==='treeAtmosphere'?'%':'')));
 const rnd=(a,b)=>a+Math.random()*(b-a),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-let raf=0,work=[],index=0,active=false,last=0,carry=0;
+let raf=0,work=[],index=0,active=false,last=0,carry=0,testMode=false;
 function reset(){active=false;cancelAnimationFrame(raf);work=[];index=0;c.clearRect(0,0,1000,1000);status.textContent='Wacht op de horizonmenging.';}
 function horizonY(){const m=document.getElementById('heightLabel').textContent.match(/Luchtzone:\s*([\d.,]+)%/);return m?Number(m[1].replace(',','.'))*10:600;}
 function css(rgb,a=1){return `rgba(${rgb.map(x=>Math.round(clamp(x,0,255))).join(',')},${a})`;}
 function mix(a,b,t){return a.map((v,i)=>v*(1-t)+b[i]*t);}
 function hexRgb(hex){const n=parseInt(hex.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255];}
-function start(){
- reset();
+function start(isTest=false){
+ reset();testMode=isTest;
  const n=+ctl.treeCount.value,rows=+ctl.treeRows.value,H=+ctl.treeHeight.value,atmo=+ctl.treeAtmosphere.value/100,hy=horizonY(),foliage=+ctl.treeFoliage.value,green=hexRgb(document.getElementById('treeGreen').value),blueFoliage=hexRgb(document.getElementById('treeBlue').value);
- if(!n){status.textContent='Geen bomen gekozen; module overgeslagen.';document.dispatchEvent(new Event('bosmieren:trees-finished'));return;}
+ if(!n){status.textContent='Geen bomen gekozen; module overgeslagen.';if(!testMode)document.dispatchEvent(new Event('bosmieren:trees-finished'));return;}
  // Achterste rij hoger in het beeld en lichter/blauwer; voorste rij donkerder en dikker.
  for(let row=0;row<rows;row++){
   const portion=Math.floor(n/rows)+(row<n%rows?1:0);
@@ -1343,12 +1345,18 @@ function start(){
    const ht=H*rnd(.48,1.5)*(.65+rowDepth*.55);
    const thick=rnd(3,11)*(.65+rowDepth*.8);
    const blue=atmo*(.85-.5*rowDepth);
-   const brown=[rnd(56,95),rnd(37,63),rnd(23,43)];
+   const species=['birch','oak','beech','pine'][Math.floor(rnd(0,4))];
+   const speciesColors={birch:[207,211,204],oak:[93,70,48],beech:[133,126,108],pine:[143,94,57]};
+   const brown=speciesColors[species].map(v=>v*rnd(.88,1.12));
    const pigment=mix(brown,[83,125,156],blue);
    const alpha=clamp(1-atmo*(.46-.22*rowDepth),.35,1);
-   const lean=rnd(-.22,.22),strokes=Math.round(rnd(5,11));
+   const lean=rnd(-.22,.22),strokes=Math.round(rnd(8,15));
+   const trunkX=t=>x+lean*ht*t;
+   const trunkY=t=>base-ht*t;
    // Schilderhandelingen zijn afzonderlijk zichtbaar, niet een kant-en-klaar boomsilhouet.
    for(let j=0;j<strokes;j++){
+    // Alleen de laatste stamafdruk wordt een gevorkte boomtop.
+    if(j===strokes-1)continue;
     const t=j/strokes,tip=1-t;
     work.push({x:x+lean*ht*t+rnd(-thick*.35,thick*.35),
       y:base-ht*t, len:ht/strokes*rnd(.8,2.1),
@@ -1357,37 +1365,121 @@ function start(){
       alpha:alpha*rnd(.7,1),angle:-Math.PI/2+lean+rnd(-.18,.18),
       ant:Math.floor(rnd(0,4)),depth:rowDepth});
    }
-   // Losse, expressionistische groene messtreken rondom de BOVENZIJDE.
-   // Geen geometrische bladerkroon: asymmetrische clusters, gaten en kleurschakeringen.
-   // De bestaande dunne stamstreken hierboven worden niet veranderd.
-   if(foliage>0){
-    const crownY=base-ht*rnd(.76,.99);
-    const crownWidth=ht*rnd(.16,.42);
-    const patches=Math.round(foliage*rnd(3.0,5.5));
-    for(let k=0;k<patches;k++){
-     const cx=x+lean*ht*.85+rnd(-crownWidth,crownWidth);
-     const cy=crownY+rnd(-ht*.18,ht*.20);
-     const chosen=Math.random()<.56?green:blueFoliage;
-     const tone=mix(chosen,Math.random()<.5?[24,39,34]:[181,194,169],rnd(.03,.24));
-     const distanceBlue=atmo*(.28-.12*rowDepth);
-     work.push({x:cx,y:cy,len:rnd(6,23)*(1+rowDepth*.3),
-      width:rnd(3.5,10.5),color:mix(tone,[84,126,154],distanceBlue),
-      alpha:clamp(alpha*rnd(.87,1.2),.6,1),angle:rnd(-Math.PI,Math.PI),
-      ant:Math.floor(rnd(0,4)),depth:rowDepth,foliage:true});
+   // Dezelfde stamhoogte en dezelfde kruin blijven behouden. Alleen het
+   // afgezaagde bovenste uiteinde vertakt in twee korte, gebogen takken.
+   // Geen nieuwe bladstreken, geen verlenging van de boom.
+   const forkT=(strokes-1)/strokes;
+   const forkStartX=trunkX(forkT),forkStartY=trunkY(forkT);
+   const forkTipY=trunkY(1);
+   for(const side of [-1,1]){
+    const forkTipX=trunkX(1)+side*ht*.038;
+    work.push({x:(forkStartX+forkTipX)/2,y:(forkStartY+forkTipY)/2,
+     len:Math.hypot(forkTipX-forkStartX,forkTipY-forkStartY),
+     width:thick*.34,color:mix(pigment,[39,45,49],.1),
+     alpha:alpha*.9,angle:Math.atan2(forkTipY-forkStartY,forkTipX-forkStartX),
+     ant:Math.floor(rnd(0,4)),depth:rowDepth,branch:true,curve:side*.19});
+   }
+   // De vier soorten van module 5, vertaald naar kleine, atmosferische verfafdrukken.
+   // Schors en takvormen zijn soortspecifiek; er worden geen kant-en-klare bomen geplakt.
+   const barkN=species==='birch'?Math.round(18+ht*.16):Math.round(8+ht*.09);
+   for(let k=0;k<barkN;k++){
+    const t=rnd(.06,.94),xx=trunkX(t)+rnd(-thick*.38,thick*.38),yy=trunkY(t);
+    let pigmentBark,markLen,markW,angle;
+    if(species==='birch'){
+     pigmentBark=Math.random()<.47?[42,48,46]:[235,237,229];
+     markLen=rnd(2,9);markW=rnd(.6,2.3);angle=rnd(-.32,.32);
+    }else if(species==='oak'){
+     pigmentBark=Math.random()<.5?[47,37,29]:[153,118,79];
+     markLen=rnd(4,13);markW=rnd(.7,2.3);angle=-Math.PI/2+rnd(-.28,.28);
+    }else if(species==='beech'){
+     pigmentBark=Math.random()<.5?[180,173,151]:[88,85,73];
+     markLen=rnd(7,18);markW=rnd(.45,1.4);angle=-Math.PI/2+rnd(-.12,.12);
+    }else{
+     pigmentBark=Math.random()<.5?[180,105,61]:[65,49,38];
+     markLen=rnd(3,12);markW=rnd(1,3);angle=rnd(-.9,.9);
     }
+    work.push({x:xx,y:yy,len:markLen,width:markW,
+     color:mix(pigmentBark,[85,126,154],blue*.6),alpha:alpha*rnd(.55,.85),
+     angle,ant:Math.floor(rnd(0,4)),depth:rowDepth,bark:true});
    }
-   // Gebroken zijtakjes, klein en spaarzaam aan de horizon.
-   const branches=Math.floor(rnd(0,4));
-   for(let j=0;j<branches;j++){
-    const t=rnd(.3,.85),side=Math.random()<.5?-1:1;
-    work.push({x:x+lean*ht*t,y:base-ht*t,len:rnd(7,22)*(1+rowDepth*.3),
-      width:rnd(1,3),color:pigment,alpha:alpha*rnd(.5,.85),
-      angle:side<0?-Math.PI+rnd(.25,.65):-rnd(.25,.65),ant:Math.floor(rnd(0,4)),depth:rowDepth});
+   // Eik: zijwaarts spreidende takken; beuk: opgaande fijne takken;
+   // grove den: open, schuin omhoog reikende takken; berk: dunne, afhangende twijgen.
+   const branchN=species==='oak'?10:species==='beech'?8:species==='pine'?9:7;
+   for(let k=0;k<branchN;k++){
+    const t=rnd(.40,.95),side=Math.random()<.5?-1:1;
+    const reach=ht*rnd(species==='oak'?.17:.11,species==='oak'?.40:.30);
+    const tilt=species==='birch'?rnd(-.4,.18):species==='pine'?rnd(.25,.75):species==='beech'?rnd(.35,.85):rnd(-.10,.52);
+    work.push({x:trunkX(t)+side*reach*.40,y:trunkY(t)-tilt*reach*.35,
+      len:reach,width:rnd(.75,2.3)*(1+rowDepth*.3),
+      color:mix(brown,[83,125,156],blue),alpha:alpha*rnd(.58,.86),
+      angle:side>0?-tilt:Math.PI+tilt,ant:Math.floor(rnd(0,4)),depth:rowDepth,branch:true,curve:side*.16});
+
+     // Kleine plukjes precies bij het uiteinde van uitstekende takken.
+     // Zelfde schildermesstreken als de bestaande kruinen, geen extra tekenstijl.
+     if(foliage>0){
+      const branchAngle=side>0?-tilt:Math.PI+tilt;
+      const midX=trunkX(t)+side*reach*.40;
+      const midY=trunkY(t)-tilt*reach*.35;
+      const tipX=midX+Math.cos(branchAngle)*reach*.46;
+      const tipY=midY+Math.sin(branchAngle)*reach*.46;
+      const leafN=species==='pine'?Math.round(7+foliage*1.2):Math.round(4+foliage*.65);
+      for(let z=0;z<leafN;z++){
+       const chosen=Math.random()<.55?green:blueFoliage;
+       const tone=mix(chosen,Math.random()<.5?[40,69,46]:[173,195,159],rnd(.05,.26));
+       work.push({x:tipX+rnd(-reach*.19,reach*.19),y:tipY+rnd(-reach*.15,reach*.15),
+        len:species==='pine'?rnd(4,10):rnd(4,12),width:species==='pine'?rnd(2,4.5):rnd(2.5,6),
+        color:mix(tone,[84,126,154],atmo*(.28-.12*rowDepth)),
+        alpha:clamp(alpha*rnd(.82,1.05),.55,1),angle:rnd(-Math.PI,Math.PI),
+        ant:Math.floor(rnd(0,4)),depth:rowDepth,foliage:true});
+      }
+     }
    }
+    // Soortspecifieke kruinen, met dezelfde bestaande mieren-messtreken.
+    // De toppen variëren in hoogte; de bladgroepen overlappen zonder een vlakke groene band.
+    if(foliage>0){
+     const crownY=base-ht*(species==='pine'?.81:species==='birch'?.79:species==='oak'?.73:.76);
+     const crownWidth=ht*(species==='oak'?rnd(.34,.51):species==='beech'?rnd(.25,.38):species==='pine'?rnd(.19,.31):rnd(.20,.32));
+     const patches=Math.round(foliage*rnd(3.8,5.7)*(species==='pine'?2.05:species==='oak'?1.42:species==='beech'?1.65:1.12));
+     const groups=[];
+     const groupN=species==='pine'?rnd(6,10):species==='oak'?rnd(6,9):species==='beech'?rnd(5,8):rnd(6,10);
+     for(let g=0;g<Math.round(groupN);g++){
+      const dx=rnd(-crownWidth*.88,crownWidth*.88);
+      const dy=species==='pine'?rnd(-ht*.19,ht*.31):species==='beech'?rnd(-ht*.14,ht*.12):rnd(-ht*.19,ht*.20);
+      groups.push({x:dx,y:dy});
+     }
+     for(let k=0;k<patches;k++){
+      const group=groups[Math.floor(rnd(0,groups.length))];
+      const spreadX=species==='beech'?.16:species==='oak'?.25:species==='pine'?.19:.21;
+      const spreadY=species==='beech'?.10:species==='pine'?.11:.13;
+      const cx=x+lean*ht*.85+group.x+rnd(-ht*spreadX,ht*spreadX);
+      const cy=crownY+group.y+rnd(-ht*spreadY,ht*spreadY);
+      // Dennen: dichte, grillige groepjes naaldstreken, maar met openingen tussen de takkransen.
+      // Eiken: brede onregelmatige bladgroepen; beuken: compactere afgeronde kronen.
+      // Berken: lichte, luchtige bladclusters.
+      if(species==='pine' && Math.random()<.11)continue;
+      const chosen=Math.random()<(species==='birch'?.42:.65)?green:blueFoliage;
+      const shade=species==='beech'?rnd(.06,.28):species==='oak'?rnd(.04,.32):rnd(.03,.25);
+      const tone=mix(chosen,Math.random()<.48?[29,48,34]:[190,204,169],shade);
+      const distanceBlue=atmo*(.28-.12*rowDepth);
+      const len=species==='pine'?rnd(4,13):species==='birch'?rnd(4,13):species==='beech'?rnd(6,17):rnd(6,20);
+      const width=species==='pine'?rnd(2.2,5.7):species==='birch'?rnd(2.2,6.5):species==='beech'?rnd(4,10):rnd(3.5,11);
+      work.push({x:cx,y:cy,len:len*(1+rowDepth*.3),width,
+       color:mix(tone,[84,126,154],distanceBlue),
+       alpha:clamp(alpha*rnd(.83,1.16),.55,1),
+       angle:species==='pine'?rnd(-.9,.9):rnd(-Math.PI,Math.PI),
+       ant:Math.floor(rnd(0,4)),depth:rowDepth,foliage:true});
+     }
+    }
+   // Geen losse kale zijtakjes na het bladerwerk: de soortspecifieke takken
+    // hierboven krijgen aan hun uiteinden dezelfde geschilderde blad-/naaldtoetsen.
+    // Dit is uitsluitend een correctie aan de kruinen van module 4.
   }
  }
  // Verre bomen eerst, dichtbij daarna, met een chaotische volgorde per rij.
  // Stammen en takjes eerst; de twee kleuren worden daarna zichtbaar rond de boomtoppen aangebracht.
+ // Alleen module 4: alle bestaande blad- en naaldstreken exact 20 canvasvakjes omhoog.
+ // Aantal, vorm, breedte, kleur en positie in de breedte blijven identiek.
+ work.forEach(o=>{if(o.foliage===true)o.y-=20;});
  work.forEach(o=>o.order=rnd(0,1));
  work.sort((a,b)=>a.depth-b.depth || Number(!!a.foliage)-Number(!!b.foliage) || a.order-b.order);
  active=true;last=performance.now();carry=0;raf=requestAnimationFrame(tick);
@@ -1395,6 +1487,17 @@ function start(){
 function stroke(o){
  const {x,y,len,width,color,alpha,angle}=o;
  c.save();c.translate(x,y);c.rotate(angle);c.globalAlpha=alpha;
+ // Alleen takken volgen een zachte boog; hun middelpunt, lengte en eindpunten blijven gelijk.
+ if(o.branch){
+  const bend=(o.curve||.16)*len;
+  c.lineCap='round';c.lineJoin='round';
+  c.strokeStyle=css(color);c.lineWidth=width;
+  c.beginPath();c.moveTo(-len/2,0);c.quadraticCurveTo(0,bend,len/2,0);c.stroke();
+  c.strokeStyle=css(mix(color,[187,190,172],.28),.45);
+  c.lineWidth=Math.max(.45,width*.22);
+  c.beginPath();c.moveTo(-len/2,-width*.16);c.quadraticCurveTo(0,bend-width*.16,len/2,-width*.16);c.stroke();
+  c.restore();return;
+ }
  // Onregelmatige schildersmesafdruk: rafelige, ongelijke randen, impasto-licht en groeven.
  c.beginPath();c.moveTo(-len*.5,-width*.25);
  const sections=5;
@@ -1422,10 +1525,11 @@ function tick(now){
  const batch=Math.min(14,Math.floor(carry));carry-=batch;
  for(let k=0;k<batch&&index<work.length;k++)stroke(work[index++]);
  status.textContent='Bomen en boomtoppen schilderen: '+index+' / '+work.length+' messtreken';
- if(index>=work.length){active=false;status.textContent='Achterste bomenrij en groene boomtoppen voltooid · '+work.length+' messtreken';document.dispatchEvent(new Event('bosmieren:trees-finished'));return;}
+ if(index>=work.length){active=false;status.textContent='Achterste bomenrij en groene boomtoppen voltooid · '+work.length+' messtreken';if(!testMode)document.dispatchEvent(new Event('bosmieren:trees-finished'));return;}
  raf=requestAnimationFrame(tick);
 }
-document.addEventListener('bosmieren:horizon-finished',start);
+document.addEventListener('bosmieren:horizon-finished',()=>start(false));
+document.getElementById('testTreeModule').addEventListener('click',()=>start(true));
 document.addEventListener('bosmieren:ground-reset',reset);
 document.getElementById('reset').addEventListener('click',reset);
 })();
@@ -1977,7 +2081,7 @@ function buildTree(type,x,base,top,scale){
    const t=i/N,t2=Math.min(1,(i+1.45)/N),p=path(t),q=path(t2),w=width(t);
    stroke(p.x,p.y,q.x,q.y,w,colors[0],1);
   }
-  for(let band=0;band<(type==='oak'?0:26);band++){
+  for(let band=0;band<(type==='oak'||type==='beech'?0:26);band++){
    const t0=rnd(0,.92),t1=Math.min(1,t0+rnd(.045,.33)),side=rnd(-.39,.39);
    const tone=type==='birch'?pick(['#e8e4d8','#f3eee1','#b6b8aa']):type==='beech'?pick(['#968d7b','#aca18e','#665f53']):pick(['#765b3e','#987550','#42372b']);
    const segments=6;
@@ -1999,7 +2103,7 @@ function buildTree(type,x,base,top,scale){
  // Schorsstreken volgen de kromming, met variabele lengtes en onregelmatige stiltes.
  // Bij de berk dwarsstreepjes; bij beuk weinig reliëf; eik diepe verticale kloven;
  // grove den losse, ongelijke schorsplaten zonder tegelraster.
- const barkCount={oak:0,birch:115,beech:55,pine:0}[type];
+ const barkCount={oak:0,birch:115,beech:0,pine:0}[type];
  for(let i=0;i<barkCount;i++){
   const t=rnd(.018,.98),w=width(t),side=rnd(-.41,.41),p=path(t),xx=p.x+side*w;
   if(type==='birch'){
@@ -2030,6 +2134,22 @@ function buildTree(type,x,base,top,scale){
    }
   }else{
    // De schorsschilden van de grove den zijn hierboven al geschilderd.
+  }
+ }
+ // Beuk: gladde grijsgroene schors met zachte, lokale kleurvlekken,
+ // enkele knoestlittekens en zonder illustratieve parallelle lijnen.
+ if(type==='beech'){
+  for(let i=0;i<Math.round(thick*.8);i++){
+   const t=rnd(.04,.95),p=path(t),side=rnd(-.34,.34),w=width(t);
+   const tone=pick(['#9a9f91','#aab0a1','#858d80','#727e70','#b5b6a6']);
+   const span=rnd(3,17)*scale;
+   stroke(p.x+side*w,p.y-span*.5,p.x+side*w+rnd(-2,2)*scale,p.y+span*.5,
+    rnd(2,Math.max(3,thick*.16)),tone,rnd(.08,.22));
+  }
+  for(let i=0;i<Math.max(2,Math.round(thick*.025));i++){
+   const t=rnd(.15,.91),p=path(t),w=width(t),xx=p.x+rnd(-.28,.28)*w;
+   stroke(xx-rnd(1,3)*scale,p.y,xx+rnd(1,4)*scale,p.y+rnd(-1.5,1.5)*scale,
+    rnd(.7,1.6)*scale,pick(['#555e52','#6c7065']),rnd(.22,.40));
   }
  }
  // Stamvoet en zichtbare wortels worden over de onderste stamstreken gelegd.
@@ -2285,7 +2405,7 @@ function begin(){reset();const types=[...document.querySelectorAll('.frontSpecie
   const base=clamp(horizonY+100+depth*255+rnd(-22,22),0,900);
   const scale=rnd(.40+depth*.27,.51+depth*.37);
   const top=35-(c/5)*465+rnd(-9,9)+((1-depth)*85);
-  trees.push({x,base,scale,top,type:types[i%types.length],row});
+  trees.push({x,base,scale,top,type:types[(slot+row)%types.length],row});
  }
  // Achterste bomen eerst schilderen, voorste bomen eroverheen.
  trees.sort((a,b)=>a.row-b.row);
@@ -2443,251 +2563,33 @@ function paint(o){g.save();g.globalAlpha=o.alpha;g.lineCap='butt';g.lineJoin='ro
  else if(o.kind==='shield'){g.fillStyle=o.color;g.beginPath();o.points.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.closePath();g.fill();}
  else{g.translate(o.x,o.y);g.rotate(o.a);g.fillStyle=o.color;g.beginPath();g.ellipse(0,0,o.l*.5,o.w*.5,0,0,Math.PI*2);g.fill();}
  g.restore();}
-function tick(now){if(!active)return;carry+=Math.min(.06,(now-last)/1000)*Math.max(170,+document.getElementById('speed').value/20);last=now;
- const n=Math.min(140,Math.floor(carry));carry-=n;
- for(let j=0;j<n&&idx<ops.length;j++){const o=ops[idx++];paint(o);if(j%4===0){const x=o.kind==='line'?o.x2:o.kind==='shield'?o.points[0].x:(o.kind==='pineTexture'||o.kind==='oakTexture')?o.profile[0].x:o.x,y=o.kind==='line'?o.y2:o.kind==='shield'?o.points[0].y:(o.kind==='pineTexture'||o.kind==='oakTexture')?o.profile[0].y:o.y;
-  antCtx.clearRect(0,0,1000,1000);for(let k=0;k<4;k++){antCtx.beginPath();antCtx.arc(clamp(x+rnd(-28,28),0,1000),clamp(y+rnd(-28,28),0,1000),7,0,Math.PI*2);antCtx.fillStyle=ink[k];antCtx.fill();antCtx.lineWidth=2;antCtx.strokeStyle='#17202e';antCtx.stroke();}}}
- status.textContent='Grote bomen schilderen: '+idx.toLocaleString('nl-BE')+' / '+ops.length.toLocaleString('nl-BE')+' verfstreken';
- if(idx>=ops.length){active=false;status.textContent='Module 5 voltooid · grote bomen met wortels en schorsdetails';document.dispatchEvent(new CustomEvent('bosmieren:front-finished',{detail:{roots:rootLocations.map(p=>({...p}))}}));return;}
- raf=requestAnimationFrame(tick);
-}
-document.addEventListener('bosmieren:request-front-roots',()=>document.dispatchEvent(new CustomEvent('bosmieren:front-roots',{detail:{roots:rootLocations.map(p=>({...p}))}})));
-document.getElementById('testFrontModule').addEventListener('click',()=>{
- // Snelle afzonderlijke test: alleen de eigen modulecanvas wordt gewist/hertekend.
- // Geen lucht-, grond-, horizon-, middenbomen- of struikberekeningen starten.
- begin();
-});
-document.addEventListener('bosmieren:shrubs-finished',begin);
-document.addEventListener('bosmieren:ground-reset',reset);
-document.getElementById('reset').addEventListener('click',reset);
-})();
-</script>
-<script>
-/* STAMVOETAFWERKING — geïntegreerd in de schildervolgorde van module 5.
-   Elke boom krijgt zijn eigen mesvegen voordat de volgende boom verschijnt. */
-(()=>{'use strict';
- const amount=document.getElementById('finishAmount');
- const label=document.getElementById('finishAmountLabel');
- const size=document.getElementById('finishSize');
- const sizeLabel=document.getElementById('finishSizeLabel');
- size.addEventListener('input',()=>sizeLabel.textContent=size.value+'%');
- const status=document.getElementById('finishStatus');
- const rand=(a,b)=>a+Math.random()*(b-a);
- amount.addEventListener('input',()=>label.textContent=amount.value);
- function palette(){
-  const selectors=['#groundEditors input[type="color"]','#ground2Editors input[type="color"]'];
-  const colors=selectors.flatMap(sel=>[...document.querySelectorAll(sel)].map(el=>el.value));
-  return colors.length?colors:['#60452e','#a57c48','#354b30','#b6a079'];
- }
- window.bosmierenFinishOps=(tree,totalTrees)=>{
-  const count=Math.round(Number(amount.value)/Math.max(1,totalTrees));
-  const colors=palette(),out=[];
-  const scale=Math.max(.55,Math.min(1.5,tree.scale||1))*Number(size.value)/100;
-  for(let j=0;j<count;j++){
-   const variation=Math.random();
-   const big=variation<.18, medium=variation<.58;
-   out.push({kind:'footKnife',x:tree.x+rand(-1,1)*(big?28:35)*scale,
-    y:tree.base+rand(-12,17)*scale,
-    l:(big?rand(85,155):medium?rand(40,86):rand(19,48))*scale,
-    w:(big?rand(25,46):medium?rand(13,28):rand(7,17))*scale,a:rand(-.75,.75),
-    color:colors[Math.floor(Math.random()*colors.length)],alpha:rand(.72,.96)});
-  }
-  return out;
- };
- document.addEventListener('bosmieren:front-finished',()=>{
-  status.textContent='Module 5 klaar · elke stamvoet direct na zijn eigen boom geschilderd';
-  // Behoud het voltooiingssignaal voor bestaande modules die erop wachten.
-  document.dispatchEvent(new Event('bosmieren:module6-finished'));
- });
- document.addEventListener('bosmieren:ground-reset',()=>{status.textContent='Wacht op module 5.';});
-})();
-</script>
-<script>
-/* MODULE 6 — handgeschilderde schors, zonder foto's. Modules 1–5 ongewijzigd. */
-(()=>{'use strict';
-const cv=document.getElementById('nearPainting'),ctx=cv.getContext('2d');
-const num=document.getElementById('nearCount'),size=document.getElementById('nearSize'),width=document.getElementById('nearWidth');
-const status=document.getElementById('nearStatus');
-const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
-for(const [el,id,fmt] of [[num,'nearCountLabel',v=>v],[size,'nearSizeLabel',v=>v+' / 10'],[width,'nearWidthLabel',v=>v+'%']]) el.addEventListener('input',()=>document.getElementById(id).textContent=fmt(el.value));
-let frame=0,active=false,ops=[],at=0,last=0,carry=0;
-function reset(){cancelAnimationFrame(frame);active=false;ops=[];at=0;ctx.clearRect(0,0,1000,1000);status.textContent='Wacht op module 5.';}
-function make(){reset();
- const n=+num.value, magnitude=+size.value, span=+width.value/100;
- const species=[...document.querySelectorAll('.frontSpecies:checked')].map(e=>e.value);
- const kinds=species.length?species:['oak','birch','beech','pine'];
- for(let i=0;i<n;i++){
-  const type=kinds[i%kinds.length],x=500+((i+.5)/n-.5)*1000*span+rnd(-34,34);
-  const thick=(24+magnitude*11)*rnd(.55,1.65),sway=rnd(-48,48),bend=rnd(-17,17),points=[];
-  for(let j=0;j<=55;j++){
-   const t=j/55,y=1040-1080*t,center=x+sway*t+bend*Math.sin(t*Math.PI);
-   // Onderste kwart: een doorlopende stam zonder spits toelopende voet.
-   // De contour blijft tot voorbij de onderrand even breed; de schorscode blijft identiek.
-   const lowerT=Math.max(t,.25);
-   const w=thick*(1-.22*lowerT)*(1+.025*Math.sin(lowerT*21+i));
-   points.push({x:center,y,w});
-  }
-  ops.push({type,points,thick});
- }
- active=true;last=performance.now();frame=requestAnimationFrame(tick);
-}
-function stroke(x1,y1,x2,y2,w,color,alpha=1){ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.globalAlpha=1;}
-function polygon(coords,color,alpha=1){ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();coords.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();ctx.globalAlpha=1;}
-function paintBirchFromModule5(p,thick){
- // Exacte schorsstreken uit buildReferenceBirch in module 5, zonder aanpassing van verdeling.
- // Alleen de stam loopt boven en onder buiten het doek.
- const base=1040,top=-40,h=base-top;
- // Alleen de stamcontour is die van module 6; de schorsmotor is die van module 5.
- const scale=1; // Exacte penseelmaat uit module 5; geen schaalvervorming
- const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
- const x=p[p.length-1].x;
- const cx=t=>{const q=Math.max(0,Math.min(p.length-1,Math.round((1-t)*(p.length-1))));return p[q].x;};
- const cy=t=>base-h*t;
- const width=t=>{const q=Math.max(0,Math.min(p.length-1,Math.round((1-t)*(p.length-1))));return p[q].w;};
- const stroke=(x1,y1,x2,y2,w,color,alpha=1)=>{
-   ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';
-   ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.globalAlpha=1;
- };
- const mark=(x,y,l,w,a,color,alpha=1)=>{
-   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(a);
-   ctx.fillStyle=color;ctx.fillRect(-l/2,-w/2,l,w);ctx.restore();
- };
- const phase=0;
- // Doorlopende stam, zonder ronde stomp: doorsnede loopt in de wortelaanzet over.
- const N=190;
- for(let j=0;j<N;j++){
-  const t=j/N,u=(j+1)/N,w=width(t),wu=width(u);
-  stroke(cx(t),cy(t),cx(u),cy(u),w,'#b9bcb9',1);
-  stroke(cx(t)-w*.12,cy(t),cx(u)-wu*.12,cy(u),w*.72,'#d5d5d0',.94);
-  stroke(cx(t)+w*.34,cy(t),cx(u)+wu*.34,cy(u),w*.14,'#7f898b',.58);
- }
- // Grijze, onregelmatige schorspartijen: niet één effen witte cilinder.
- for(let i=0;i<175;i++){
-  const t=rnd(.025,.97),w=width(t),side=rnd(-.39,.39);
-  const len=rnd(9,70)*scale,du=Math.min(.985,t+len/h);
-  const grey=pick(['#858f90','#9ba4a2','#aeb4b1','#777f7e','#c0c3bd']);
-  stroke(cx(t)+side*w,cy(t),cx(du)+side*width(du)+rnd(-3,3)*scale,cy(du),
-   rnd(2.5,Math.max(3,w*.24)),grey,rnd(.18,.53));
- }
- // Geen gelijkmatige horizontale streepjes: grillige schorsvelden van wisselende grootte.
- // Zwart ontstaat in onderbroken, soms verticaal uitlopende rafelvlekken.
- const patches=Math.round(48*h/750);
- for(let i=0;i<patches;i++){
-  const t=rnd(.016,.97),w=width(t),side=rnd(-.50,.50);
-  const x0=cx(t)+side*w,y0=cy(t);
-  const broad=Math.random()<.70;
-  const length=Math.min(w*.80,rnd(broad?24:6,broad?64:22)*scale);
-  const depth=rnd(broad?22:4,broad?64:15)*scale;
-  const dark=pick(['#171a19','#262a29','#343936','#4a504c']);
-  // Korte dwarslittekens naast grotere grillige zwarte vlakken.
-  const seg=3+Math.floor(rnd(0,5));
-  let lastX=x0-length*.5,lastY=y0;
-  for(let k=1;k<=seg;k++){
-   const u=k/seg,xx=x0-length*.5+length*u+rnd(-2,2)*scale;
-   const yy=y0+Math.sin(u*Math.PI)*rnd(-depth,depth)*.42+rnd(-2.5,2.5)*scale;
-   stroke(lastX,lastY,xx,yy,rnd(broad?5:1.4,broad?14:4.3)*scale,dark,rnd(.72,1));
-   lastX=xx;lastY=yy;
-  }
-  if(broad){
-   for(let k=0;k<Math.floor(rnd(10,22));k++){
-    const xx=x0+rnd(-length*.42,length*.42),yy=y0+rnd(-depth*.48,depth*.48);
-    mark(xx,yy,rnd(5,22)*scale,rnd(3,13)*scale,rnd(-1.1,1.1),dark,rnd(.48,.91));
-   }
-  }
- }
- // Lange, smalle schaduwen en zachte droge messtreken volgen de lengte van de schors.
- for(let i=0;i<115;i++){
-  const t=rnd(.02,.96),len=rnd(7,95)/h*scale;
-  const u=Math.min(.995,t+len),side=rnd(-.43,.43);
-  const shade=pick(['#d4d5d0','#a8b0af','#899696','#c3c7c2','#737e7c']);
-  stroke(cx(t)+side*width(t),cy(t),cx(u)+side*width(u)+rnd(-3,3)*scale,cy(u),rnd(.6,3.5)*scale,shade,rnd(.18,.7));
- }
-
-}
-function paint(o){
- const {points:p,type,thick}=o;ctx.save();
- ctx.beginPath();p.forEach((v,i)=>i?ctx.lineTo(v.x-v.w/2,v.y):ctx.moveTo(v.x-v.w/2,v.y));
- for(let i=p.length-1;i>=0;i--)ctx.lineTo(p[i].x+p[i].w/2,p[i].y);
- ctx.closePath();ctx.clip();
- if(type==='birch'){paintBirchFromModule5(p,thick);ctx.restore();return;}
- const base={beech:'#878d78',birch:'#e0e0d7',oak:'#797467',pine:'#796454'}[type];
- ctx.fillStyle=base;ctx.fillRect(-200,-60,1400,1120);
- // Lange transparante messtreken vormen de cilindrische ondergrond.
- for(let i=0;i<Math.round(thick*1.6);i++){
-  const t=rnd(0,1),v=p[Math.floor(t*(p.length-1))],x=v.x+rnd(-.51,.51)*v.w;
-  const colors={beech:['#737d6b','#a3a995','#777e73','#b2ac92'],birch:['#f1f0e8','#c2c5be','#a6aaa5','#ffffff'],oak:['#5b594e','#96907b','#656354','#aaa18a'],pine:['#53483e','#a18b77','#67574a','#ad9b89']}[type];
-  stroke(x,v.y-rnd(5,35),x+rnd(-3,3),v.y+rnd(30,170),rnd(.6,Math.max(1.5,thick*.08)),pick(colors),rnd(.12,.45));
- }
- if(type==='beech'){
-  // Gladde beuk: uiterst fijne nerf, groene verwering en sporadische littekens.
-  for(let i=0;i<Math.round(thick*1.1);i++){
-   const v=pick(p),x=v.x+rnd(-.47,.47)*v.w;
-   stroke(x,v.y-rnd(5,20),x+rnd(-2,2),v.y+rnd(8,90),rnd(.3,1.5),pick(['#566657','#c0c1a7','#777a6b']),rnd(.13,.48));
-  }
-  for(let i=0;i<Math.max(4,Math.round(thick*.045));i++){
-   const v=pick(p),x=v.x+rnd(-.38,.38)*v.w;
-   stroke(x-rnd(2,7),v.y,x+rnd(2,7),v.y+rnd(-2,3),rnd(.8,2.5),'#39433b',rnd(.3,.65));
-  }
- }else if(type==='birch'){
-  // Berk: grote onregelmatige afbladderende schorsvelden, niet stippen of een fototextuur.
-  for(let i=0;i<Math.round(thick*.45);i++){
-   const v=pick(p),x=v.x+rnd(-.45,.45)*v.w,y=v.y;
-   const w=rnd(3,Math.max(7,thick*.22)),h=rnd(4,30);
-   polygon([[x-w*.55,y-h*.4],[x+w*.3,y-h*.65],[x+w*.5,y-h*.1],[x+w*.22,y+h*.65],[x-w*.7,y+h*.35]],pick(['#484d4b','#626663','#969a95','#d0d1c9']),rnd(.22,.72));
-  }
-  // Onregelmatige horizontale bastnaden en scheurtjes.
-  for(let i=0;i<Math.round(thick*1.5);i++){
-   const v=pick(p),x=v.x+rnd(-.47,.47)*v.w,y=v.y,w=rnd(3,Math.max(8,thick*.28));
-   stroke(x-w*.5,y+rnd(-2,2),x+w*.5,y+rnd(-3,3),rnd(.6,2.9),pick(['#343938','#555956','#8e918d']),rnd(.3,.83));
-  }
-  for(let i=0;i<Math.round(thick*.4);i++){
-   const v=pick(p),x=v.x+rnd(-.45,.45)*v.w;
-   stroke(x,v.y-rnd(8,28),x+rnd(-2,2),v.y+rnd(12,40),rnd(.6,2.6),'#f8f8f2',rnd(.25,.75));
-  }
- }else if(type==='oak'){
-  // Eik: lange, vertakkende, kronkelende groeven in een dicht netwerk.
-  const lines=Math.round(thick*1.45);
-  for(let i=0;i<lines;i++){
-   const v=pick(p),x=v.x+rnd(-.49,.49)*v.w,y=v.y-rnd(0,100);
-   const length=rnd(25,160),steps=5+Math.floor(rnd(0,6));
-   let px=x,py=y;
-   for(let j=0;j<steps;j++){
-    const nx=px+rnd(-4,4),ny=py+length/steps;
-    stroke(px,py,nx,ny,rnd(.5,Math.max(1.5,thick*.026)),pick(['#343a33','#4b4b40','#a6a08d']),rnd(.32,.9));
-    if(j>1&&Math.random()<.19)stroke(nx,ny,nx+rnd(-9,9),ny+rnd(7,24),rnd(.5,1.5),'#41463d',rnd(.25,.65));
-    px=nx;py=ny;
-   }
-  }
- }else{
-  // Grove den: onregelmatig aaneensluitende schorsplaten met grillige breuknaden.
-  // Plaatvormen zijn grillig, overlappen en hebben geen herhalend tegelraster.
-  for(let i=0;i<Math.round(thick*2.6);i++){
-   const v=pick(p),x=v.x+rnd(-.53,.53)*v.w,y=v.y;
-   const w=rnd(5,Math.max(9,thick*.19)),h=rnd(15,65);
-   const coords=[[x-w*.55,y-h*.4],[x-rnd(.1,.35)*w,y-h*.65],[x+w*.35,y-h*.4],[x+w*.55,y],[x+w*.15,y+h*.56],[x-w*.48,y+h*.35]];
-   polygon(coords,pick(['#52483e','#a08b78','#7a6554','#b2a18f','#655448']),rnd(.4,.85));
-   stroke(x-w*.47,y-h*.25,x-w*.25,y+h*.3,rnd(.8,3),'#3e3933',rnd(.35,.8));
-   if(Math.random()<.55)stroke(x+w*.1,y-h*.3,x+w*.33,y+h*.15,rnd(.5,2),'#c0ad99',rnd(.22,.7));
-  }
-  for(let i=0;i<Math.round(thick*.75);i++){
-   const v=pick(p),x=v.x+rnd(-.45,.45)*v.w;
-   stroke(x,v.y-rnd(12,35),x+rnd(-5,5),v.y+rnd(14,42),rnd(.7,2.8),'#393830',rnd(.25,.68));
-  }
- }
- // Lichte en donkere rand volgen de stamcontour: schilderachtige ronding.
- for(let j=1;j<p.length;j++){
-  const a=p[j-1],b=p[j];
-  stroke(a.x-a.w*.46,a.y,b.x-b.w*.46,b.y,Math.max(2,thick*.065),'#161d1c',.13);
-  stroke(a.x+a.w*.38,a.y,b.x+b.w*.38,b.y,Math.max(2,thick*.06),'#f8f1df',.12);
- }
- ctx.restore();
-}
 function tick(now){if(!active)return;
  carry+=Math.min(.07,(now-last)/1000)*Math.max(80,+document.getElementById('speed').value/18);last=now;
  const steps=Math.min(260,Math.floor(carry));carry-=steps;
- for(let j=0;j<steps&&at<ops.length;j++)paint(ops[at++]);
- status.textContent='Module 6 schildert: '+at+' / '+ops.length+' voorgrondstammen';
- if(at>=ops.length){active=false;status.textContent='Module 6 klaar · '+num.value+' voorgrondstammen met geschilderde schors';document.dispatchEvent(new Event('bosmieren:near-finished'));return;}
+ let budget=Math.max(1,Math.round(steps/12));
+ while(budget-->0&&at<ops.length){
+  const o=ops[at];
+  const pixels=o.type==='oak'?oakPixels:o.type==='pine'?pinePixels:null;
+  if((o.type==='oak'||o.type==='pine')&&!pixels){
+   status.textContent='Module 6 wacht op de onzichtbare fotoblauwdruk…';
+   frame=requestAnimationFrame(tick);return;
+  }
+  if(pixels){
+   // Eén smalle horizontale strook per stap: nooit de hele foto ineens tonen.
+   const next=Math.min(1040,photoRow+7.8);
+   ctx.save();ctx.beginPath();const p=o.points;
+   p.forEach((v,i)=>i?ctx.lineTo(v.x-v.w/2,v.y):ctx.moveTo(v.x-v.w/2,v.y));
+   for(let i=p.length-1;i>=0;i--)ctx.lineTo(p[i].x+p[i].w/2,p[i].y);
+   ctx.closePath();ctx.clip();
+   if(o.type==='oak')paintOakFromReference(p,photoRow,next);
+   else paintPineFromReference(p,photoRow,next);
+   ctx.restore();drawPhotoAnts(p,next);
+   photoRow=next;
+   if(photoRow>=1040){at++;photoRow=-40;nearAntCtx.clearRect(0,0,1000,1000);}
+  }else{nearAntCtx.clearRect(0,0,1000,1000);paint(o);at++;}
+ }
+ status.textContent='Module 6: mieren schilderen '+(at+1)+' / '+ops.length+' voorgrondstammen'+(photoRow>-40?' · '+Math.round((photoRow+40)/1080*100)+'% schors':'');
+ if(at>=ops.length){active=false;nearAntCtx.clearRect(0,0,1000,1000);status.textContent='Module 6 klaar · '+num.value+' voorgrondstammen met geschilderde schors';document.dispatchEvent(new Event('bosmieren:near-finished'));return;}
  frame=requestAnimationFrame(tick);
 }
 document.getElementById('testNearModule').addEventListener('click',make);
